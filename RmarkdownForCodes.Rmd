@@ -1,0 +1,379 @@
+---
+---
+## Import essential libraries and packages
+```{r, include =FALSE, echo = FALSE}
+library(readxl)
+library(corrplot)
+library(PerformanceAnalytics)
+library(lmtest)
+library(faraway)
+library(MASS)
+library(lmtest)
+```
+
+
+## Import Dataset:
+```{r, include =FALSE, echo = FALSE}
+ENB2012_data <- read_excel("D:\\Western University\\A-term\\Statistical Modelling I\\Final Project\\Submitted files\\ENB2012_data.xlsx")
+
+# drop Y1 in this project (Y2 was selected to work on)
+df = subset(ENB2012_data, select = -c(Y1) )
+```
+
+
+## Summary Statistics
+# Output Variable
+```{r}
+plot(density(df$Y2),
+     xlab="Cooling Loads",
+     col = "dodgerblue",
+     main = "Density of Observed Cooling Loads")
+```
+
+
+# Correlation Matrix:
+```{r cars}
+# correlations between predictors and response
+corr <- round(cor(df, method = "spearman"), 2) # rounded
+# useful correlation plots
+
+col3 <- colorRampPalette(c("red", "white", "blue")) 
+corrplot.mixed(corr, tl.col = "black")
+```
+
+
+##Section 1: Model Building
+#Model Classes
+```{r}
+# Define first, second, and third order models
+# First order
+lm_1 = lm(Y2~., data = df)
+# Second Order
+lm_2 = lm(Y2~.*., data = df)
+#Third Order
+lm_3 = lm(Y2~.*.*., data = df)
+
+summary(lm_1)
+summary(lm_2)
+summary(lm_3)
+
+
+# Upon Conclusions:
+reduced_model1 = lm(Y2~X1+X2+X3+X4+X5+X7, data=df)
+anova(reduced_model1, lm_1)
+reduced_model2 = lm(Y2~(.-X6-X8)*(.-X6-X8), data=df)
+anova(reduced_model2, lm_2)
+reduced_model3 = lm(Y2~(.-X6-X8)*(.-X6-X8)*(.-X6-X8), data=df)
+anova(reduced_model3, lm_3)
+
+
+# Drop X4 since it is a linear combination of other predictors:
+drop = "X4"
+df = df[,!(names(df)%in% drop)]
+
+# Since X6,X8 do not pass anova test, drop X6,X8 in first order model
+lm_1 = lm(Y2~. -X6-X8, data = df)
+lm_2 = lm(Y2~.*., data = df)
+lm_3 = lm(Y2~.*.*. , data = df)
+```
+
+
+# Stepwise Selection
+
+Stepwise Selection on each of the models
+```{r}
+#evaluate the new models using AIC
+step_model_1 = step(lm_1,direction="both",trace=FALSE, k=2)
+step_model_2 = step(lm_2,direction="both",trace=FALSE, k=2)
+step_model_3 = step(lm_3,direction="both",trace=FALSE, k=2)
+```
+
+
+View results in second window to avoid long execution time of section above
+```{r}
+summary(step_model_1)
+summary(step_model_2)
+summary(step_model_3)
+
+#Obtain AIC, BIC and Adjusted R-squared for the models:
+AIC(step_model_1,step_model_2,step_model_3)
+BIC(step_model_1,step_model_2,step_model_3)
+summary(step_model_1)$adj.r.squared
+summary(step_model_2)$adj.r.squared
+summary(step_model_3)$adj.r.squared
+```
+
+
+# Model Adequacy
+```{r}
+# Calculate coefficients of variation:
+y_bar = mean(df$Y2)
+
+# For each model:
+sigma(step_model_1)/y_bar
+sigma(step_model_2)/y_bar
+sigma(step_model_3)/y_bar
+```
+
+
+# Model Diagnostics
+Original Plots and tests on models
+```{r}
+# Residual and Normal QQ plots for first order model:
+par(mfrow=c(1,2))
+plot(fitted(step_model_1), resid(step_model_1), col = "grey", pch = 1,
+     xlab = "Fitted", ylab = "Residual",cex=1, main = "Fitted Values versus Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+qqnorm(resid(step_model_1), col = "grey", pch=1,cex=1)
+qqline(resid(step_model_1), col = "dodgerblue", lwd = 2)
+
+# BP test and shapiro test for first order model
+bptest(step_model_1)
+shapiro.test(resid(step_model_1))
+
+
+# Residual and Normal QQ plots for second order model:
+par(mfrow=c(1,2))
+plot(fitted(step_model_2), resid(step_model_2), col = "grey", pch = 1,
+     xlab = "Fitted", ylab = "Residual",cex=1, main = "Fitted Values versus Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+qqnorm(resid(step_model_2), col = "grey", pch=1,cex=1)
+qqline(resid(step_model_2), col = "dodgerblue", lwd = 2)
+
+# BP test and shapiro test for second order model
+bptest(step_model_2)
+shapiro.test(resid(step_model_2))
+
+
+# Residual and Normal QQ plots for third order model:
+par(mfrow=c(1,2))
+plot(fitted(step_model_3), resid(step_model_3), col = "grey", pch = 1,
+     xlab = "Fitted", ylab = "Residual",cex=1, main = "Fitted Values versus Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+qqnorm(resid(step_model_3), col = "grey", pch = 1,cex=1)
+qqline(resid(step_model_3), col = "dodgerblue", lwd = 2)
+
+# BP test and shapiro test for third order model
+bptest(step_model_3)
+shapiro.test(resid(step_model_3))
+```
+
+
+# Influential Points
+To find influential points, the Cook’s distance of the points was used as a metric:
+```{r}
+#obtain indices of influential points for each model
+cd_1 = cooks.distance(lm_1)
+length(cd_1)
+ind_cd_1 = which(cd_1 > (4/length(cd_1)))
+cd_2 = cooks.distance(lm_2)
+ind_cd_2 = which(cd_2 > (4/length(cd_2)))
+cd_3 = cooks.distance(lm_3)
+ind_cd_3 = which(cd_3 > (4/length(cd_3)))
+
+# Obtain number of influential points for each model
+print('Number of Influential Points')
+sprintf("Model 1: %s",length(ind_cd_1))
+sprintf("Model 2: %s",length(ind_cd_2))
+sprintf("Model 3: %s",length(ind_cd_3))
+
+
+# Remove influential points from dataset
+infl_points = union(ind_cd_1,ind_cd_2)
+infl_points = union(infl_points,ind_cd_3)
+length(infl_points)
+df = df[-infl_points,]
+
+```
+
+
+# Response Transformation
+In order to have our model satisfy the equal variance assumption, the Box-Cox method was used to determine a function that could be applied to the output, in order to create a constant spread of variance for fitted values of our output. I
+```{r}
+# Apply Box-Cox method to models
+boxcox(step_model_1, data = df, lambda = seq(-0.2, 0.5, by=0.05))
+boxcox(step_model_2, data = df, lambda = seq(0, 1, by=0.05))
+boxcox(step_model_3, data = df, lambda = seq(-0.5, 0.5, by=0.05))
+# From the plots, the chosen lambdas are:
+lambda1 = 0.21
+lambda2 = 0.58
+lambda3 = -0.15
+#recreate the models with transformed outputs:
+transf_model_1 = lm(((Y2^(lambda1)-1)/(lambda1)) ~ X1+X2+X3+X5+X7, data = df)
+transf_model_2 = lm(((Y2^(lambda2)-1)/(lambda2)) ~ X1+X2+X3+X5+X7+X8+X1:X3+X1:X5+X2:X3+X2:X5+X2:X7+X3:X7+X5:X7+X7:X8, data = df)
+transf_model_3 = lm(((Y2^(lambda3)-1)/(lambda3)) ~ X1+X2+X3+X5+X7+X8+X1:X2+X1:X3+X1:X5+X2:X3+X2:X5+X2:X7+X3:X7+X5:X7+X7:X8+X1:X2:X3+X1:X2:X5, data = df)
+```
+
+# Model Diagnostics for new created models
+
+Run assumption tests on Transformed models
+```{r}
+# Residual and Normal QQ plots for first order model:
+par(mfrow=c(1,2))
+plot(fitted(transf_model_1), resid(transf_model_1), col = "grey", pch = 1,
+     xlab = "Fitted", ylab = "Residual",cex=1, main = "Fitted versus Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+qqnorm(resid(transf_model_1), col = "grey", pch = 1,cex=1)
+qqline(resid(transf_model_1), col = "dodgerblue", lwd = 2)
+
+# BP test and shapiro test for first order model
+bptest(transf_model_1)
+shapiro.test(resid(transf_model_1))
+
+
+# Residual and Normal QQ plots for second order model:
+par(mfrow=c(1,2))
+plot(fitted(transf_model_2), resid(transf_model_2), col = "grey", pch = 1,
+     xlab = "Fitted", ylab = "Residual",cex=1, main = "Fitted versus Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+qqnorm(resid(transf_model_2), col = "grey", pch = 1,cex=1)
+qqline(resid(transf_model_2), col = "dodgerblue", lwd = 2)
+
+# BP test and shapiro test for second order model
+bptest(transf_model_2)
+shapiro.test(resid(transf_model_2))
+
+
+# Residual and Normal QQ plots for third order model:
+par(mfrow=c(1,2))
+plot(fitted(transf_model_3), resid(transf_model_3), col = "grey", pch = 1,
+     xlab = "Fitted", ylab = "Residual",cex=1, main = "Fitted versus Residuals")
+abline(h = 0, col = "darkorange", lwd = 2)
+qqnorm(resid(transf_model_3), col = "grey", pch = 1,cex=1)
+qqline(resid(transf_model_3), col = "dodgerblue", lwd = 2)
+
+# BP test and shapiro test for third order model
+bptest(transf_model_3)
+shapiro.test(resid(transf_model_3))
+```
+
+After removing influential points to deal with the effects of outliers in the data and transforming the output using a variance stabilizing transform, the model assumptions were then re-evaluated.
+
+
+## Evaluation the model
+# Train/Test Loss
+```{r}
+## Evaluation the model
+# First, splitting data to test and train set
+X = model.matrix(Y2~.,df)[, -1] #the first column (for intercept) is eliminated
+y = df$Y2
+set.seed(1)
+n = nrow(df)
+idx_tr <- sample(n,round(0.3*n),replace=FALSE)
+y_tr <- y[idx_tr]
+X_tr <- X[idx_tr,]
+y_ts <- y[-idx_tr]
+X_ts <- X[-idx_tr,]
+
+# Evaluate the train loss and the test loss to make sure the model is not overfit
+y_ts_pred <- ((predict(transf_model_3, newdata = data.frame(X_ts))*lambda3)+1)^(1/lambda3)
+y_tr_pred <- ((predict(transf_model_3, newdata = data.frame(X_tr))*lambda3)+1)^(1/lambda3)
+test_loss <- sum((y_ts - y_ts_pred)^2)/nrow(X_ts)
+train_loss <- sum((y_tr - y_tr_pred)^2)/nrow(X_tr)
+
+train_loss
+test_loss
+# As we can see, the result are very close to each other.
+```
+
+by taking out the influential points in the model, we believe that there is a lower risk of outliers in the data producing erroneous results in our validation, something that the mean square error is greatly affected by.
+
+
+# Cross Validation
+
+```{r}
+# Now we want to estimate the validation score using 10-fold CV
+k = 10
+n = nrow(df)
+rand_index = sample(n)
+#define variables to store RMSE values
+MSE_kcv = numeric(k)
+
+
+#Create k equally size folds
+folds <- cut(1:n,breaks=k,labels=FALSE)
+
+#Perform a k-fold cross validation
+for(i in 1:k)
+{
+  # Find the indices for test data
+  test_index = which(folds==i)
+  
+  # Obtain training/test data
+  X = model.matrix(Y2~.,df)[, -1] #the first column (for intercept) is eliminated
+  y = df$Y2
+  X_train_data = X[-test_index, ]
+  X_test_data = X[test_index, ]
+  y_train_data = y[-test_index]
+  y_test_data = y[test_index]
+  
+  # model
+  lambda3 = -0.15
+  cvlm <- lm(((Y2^(lambda3)-1)/(lambda3)) ~ X1+X2+X3+X5+X7+X8+X1:X2+X1:X3+X1:X5+X2:X3+X2:X5+X2:X7+X3:X7+X5:X7+X7:X8+X1:X2:X3+X1:X2:X5, data = df)
+  
+  # Obtain MSE on the 'test' data
+  resid_lm = y_test_data - ((predict(cvlm, newdata = data.frame(X_test_data))*lambda3)+1)^(1/lambda3)
+  MSE_kcv[i] = sum(resid_lm^2)/nrow(X_test_data)
+}
+mean(MSE_kcv)
+```
+
+
+To further test our model, we conducted the 10-fold cross validation 100 times to show how the estimator is stable for this model.
+
+```{r}
+# 100 iterations to compute the 10-fold cross-validation score using MSE
+
+k = 10
+n = nrow(df)
+rand_index = sample(n)
+repetitive = numeric(100)
+
+
+#Create k equally size folds
+folds <- cut(1:n,breaks=k,labels=FALSE)
+
+#Perform a k-fold cross validation
+for (j in 1:100) {
+  # Shuffle the data (randomization)
+  # First randomly order integers 1,...,n (using the sample function)
+  #set.seed(1)
+  rand_index = sample(n)
+  # Use the ordered indices to create poly_data2
+  df2 = df[rand_index,]
+  MSE_kcv = numeric(k) # 
+  for(i in 1:k)
+  {
+    # Find the indices for test data
+    test_index = which(folds==i)
+    
+    # Obtain training/test data
+    X = model.matrix(Y2~.,df2)[, -1] #the first column (for intercept) is eliminated
+    y = df2$Y2
+    X_train_data = X[-test_index, ]
+    X_test_data = X[test_index, ]
+    y_train_data = y[-test_index]
+    y_test_data = y[test_index]
+    
+    # model
+    lambda3 = -0.15
+    cvlm <- lm(((Y2^(lambda3)-1)/(lambda3)) ~ X1+X2+X3+X5+X7+X8+X1:X2+X1:X3+X1:X5+X2:X3+X2:X5+X2:X7+X3:X7+X5:X7+X7:X8+X1:X2:X3+X1:X2:X5, data = df)
+    
+    # Obtain MSE on the 'test' data
+    resid_lm = y_test_data - ((predict(cvlm, newdata = data.frame(X_test_data))*lambda3)+1)^(1/lambda3)
+    MSE_kcv[i] = sum(resid_lm^2)/nrow(X_test_data)
+  }
+  
+  repetitive[j] = mean(MSE_kcv)
+  
+}
+```
+
+## Conclusion
+We have worked on a comprehensive framework to study CL using a range of diverse predictors which included compactness, orientation, and glazing properties. These findings are particularly compelling given the accurate prediction with a robust model. The statistical tools used here indicate that X4 (Roof Area) is highly correlated with X5 (Overall Height), X2 (Surface Area), and X1 (Relative Compactness). This strong relationship is shown in the model summary when we created the linear regression model. As a result, we got rid of it in the first step.
+
+One aspect of our analysis that warrants further investigation is the bimodal distribution of the output. In the beginning stages of the project, we believed that the output could be explained by some phenomena captured in the input variables (the orientation of the building) but the stepwise selection dropped these predictors from our models, which indicated that our initial guess might not be the case.
+
+...
+
+Finally, we found an accurate functional relationship between the predictors and response variable and considered the potential interactions between predictors that have made our mode more accurate.
