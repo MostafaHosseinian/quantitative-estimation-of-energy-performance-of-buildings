@@ -1,4 +1,4 @@
-# Accurate quantitative estimation of energy performance of buildings using statistical models
+# Quantitative estimation of energy performance of buildings using statistical models
 
 ## Introduction
 The global requirement for energy is growing every year. It was declared by [World Energy Outlook 2020](https://www.iea.org/reports/world-energy-outlook-2020) that prior to the pandemic, energy demand was projected to grow by 12% between 2019 and 2030. Growth over this period is now 9% in the Stated Policies Scenario. Moreover, buildings in some countries are legally bound to conform to appropriate minimum requirements regarding energy efficiency. One way to alleviate the everincreasing demand for additional energy supply is to have more energy-efficient building designs with improved energy conservation properties.
