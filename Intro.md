@@ -12,3 +12,18 @@ Regarding efficient designs of buildings, calculation of the heating load (HL) a
 Different statistical approaches have been used to predict energy demand for the building in various studies. The vast number of machine learning techniques in regression and classification problems have been conducted to estimate the heating load and cooling load, and many methods have been used to improve the model accuracy.
 
 In this study, CL would be estimated with respect to Mean Squared Error. Essential feature transform and feature selection steps on the model is applied to find the best fitted model.
+
+## Dataset
+The data set was gained through the [UCI Machine Learning Repository](). The dataset contains eight attributes (or features, denoted by X1...X8) and two responses (or outcomes, denoted by y1 and y2).
+
+Specifically:
+X1 Relative Compactness
+X2 Surface Area
+X3 Wall Area
+X4 Roof Area
+X5 Overall Height
+X6 Orientation
+X7 Glazing Area
+X8 Glazing Area Distribution
+y1 Heating Load
+y2 Cooling Load
