@@ -371,7 +371,6 @@ for (j in 1:100) {
 
 ## Conclusion
 We have worked on a comprehensive framework to study CL using a range of diverse predictors which included compactness, orientation, and glazing properties. These findings are particularly compelling given the accurate prediction with a robust model. The statistical tools used here indicate that X4 (Roof Area) is highly correlated with X5 (Overall Height), X2 (Surface Area), and X1 (Relative Compactness). This strong relationship is shown in the model summary when we created the linear regression model. As a result, we got rid of it in the first step.
-
 One aspect of our analysis that warrants further investigation is the bimodal distribution of the output. In the beginning stages of the project, we believed that the output could be explained by some phenomena captured in the input variables (the orientation of the building) but the stepwise selection dropped these predictors from our models, which indicated that our initial guess might not be the case.
 
 ...
