@@ -14,7 +14,7 @@ library(lmtest)
 
 ## Import Dataset:
 ```{r, include =FALSE, echo = FALSE}
-ENB2012_data <- read_excel("D:\\Western University\\A-term\\Statistical Modelling I\\Final Project\\Submitted files\\ENB2012_data.xlsx")
+ENB2012_data <- read_excel("ENB2012_data.xlsx")
 
 # drop Y1 in this project (Y2 was selected to work on)
 df = subset(ENB2012_data, select = -c(Y1) )
